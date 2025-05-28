@@ -1,5 +1,6 @@
 import SwipeCard, { SwipeCardHandle } from '@/Components/MyOwnSwipeCard';
 import { useProfiles } from '@/lib/fetchProfiles';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Redirect } from 'expo-router';
@@ -93,38 +94,31 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 export default function Home() {
 
   const { session, isLoading } = useAuth();
-  const { profiles, fetching } = useProfiles(session)
+
+  const { profiles, fetching } = useProfiles(session) //all profiles except session.user.id
 
 
+  //TODO : filter the profiles here 
+      //-> useEffect then show only profiles that are not yet matched with me
+      //get the id of all MATCHED users
+      //exclude those MATCHED users.
+
+
+
+
+
+
+
+
+
+      
 
 
   const swipeRef = useRef<SwipeCardHandle>(null);
   //fetch all the list in 'profiles' table where important column to get are
   //username, full_name, avatar_url, location (geography: 0101000020E6100000BC26FFEEF84B5E40BEE1992BDE2B2D40), bio, fighting_style, experience_level (1: beginner 2: intermediate, 3: expert), availability (jsonb example {"days": ["Fri"], "time": "0:47-9:47"})
   const sampleProfiles = [
-    {
-      id: '1',
-      name: 'Alice',
-      age: 28,
-      imageUrl: require('@/assets/images/cong.jpg'),
-    },
-    {
-      id: '2',
-      name: 'Alice',
-      age: 28,
-      imageUrl: require('@/assets/images/cong.jpg'),
-    }, {
-      id: '3',
-      name: 'Alice',
-      age: 28,
-      imageUrl: require('@/assets/images/cong.jpg'),
-    },
-    {
-      id: '4',
-      name: 'Bob',
-      age: 30,
-      imageUrl: require('@/assets/images/elon.jpg'),
-    },
+
   ];
 
   if (isLoading) {
@@ -136,13 +130,45 @@ export default function Home() {
   }
 
 
-  const handleSwipeLeft = (index: number) => {
-    console.log(`Swiped left on card ${index}`);
+
+
+
+  //📌index: number is not id => it's just helper for POSITION[index] because the count of POSITIONS
+  //is solely based on given PROFILES.lenght. so define the ID here like profiles[index] (so 0-n)
+  const handleSwipeLeft = async (index: number) => {
+    const profile = profiles[index]
+    console.log(`🥊Swiped left on card ${profile.id}`);
+    await recordSwipe(profile.id, 'left')
   };
 
-  const handleSwipeRight = (index: number) => {
-    console.log(`Swiped right on card ${index}`);
+  const handleSwipeRight = async (index: number) => {
+    const profile = profiles[index]
+    console.log(`🥊Swiped right on card ${profile.id}`);
+    await recordSwipe(profile.id, 'right')
+
+
   };
+
+  const recordSwipe = async (swipeeId: string, direction: 'left' | 'right') => {
+    if (!session?.user) return
+
+    const { error } = await supabase
+      .from('swipe_actions')
+      .insert({
+        swiper_id: session.user.id,
+        swipee_id: swipeeId,
+        direction,
+      })
+
+
+      if (error) {
+      console.error('Swipe failed:', error.message)
+      return
+    }
+
+    // Optional: Remove swiped profile from list
+    //setProfiles(prev => prev.filter(p => p.id !== swipeeId))
+  }
 
 
   // type SwipeCardProps <T extends { id: string }> = {
@@ -160,7 +186,7 @@ export default function Home() {
 
 
 
-  
+
 
   return (
 

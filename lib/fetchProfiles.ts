@@ -23,7 +23,7 @@ export type Profile = {
 
 //helper function for getting actual address rather than numerics FReE?? idk try
 async function reverseGeocode(lat: number, lng: number) {
-  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat= ${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
   const response = await fetch(url, {
     headers: { 'User-Agent': 'MyApp/1.0' } // Required by OSM
   });
@@ -46,6 +46,14 @@ async function reverseGeocode(lat: number, lng: number) {
 
 export function useProfiles(session: Session | null) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
+
+
+
+  //already matched, can be PASSED for message views and to filter out the NOTmathcedProfiles
+  const [matchedProfiles, setMatchedProfiles] = useState<Profile[]>([]);
+
+
+
   const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
@@ -54,12 +62,16 @@ export function useProfiles(session: Session | null) {
       return;
     }
 
-    
+
 
     const load = async () => {
       try {
+
+
+
+        //🎯vstep 1: FETCH ALL profiles
         setFetching(true);
-        const { data, error } = await supabase
+        const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select(`
             id,
@@ -75,20 +87,90 @@ export function useProfiles(session: Session | null) {
           `)
           .neq('id', session.user.id);
 
-        if (error) throw error;
+
+        if (profilesError) throw profilesError;
 
 
 
-        const profilesWithAddresses = await Promise.all(
-          data.map(async (profile: any) => {
-            const lat = parseFloat(profile.latitude);
-            const lng = parseFloat(profile.longitude);
-            const address = await reverseGeocode(lat, lng);
-            return { ...profile, address };
+        //🎯STEP 2: fetch from matchedTable if swiper/swipee is matching my id
+        const { data: matchesData, error: matchesError } = await supabase
+          .from('matches')
+          .select('user1_id, user2_id')
+          //.eq('status', 'active') ===> soon maybe we need 
+          .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`);
+
+        if (matchesError) throw matchesError;
+
+
+        //🎯vSTEP 3: get the ids of matched users (to filter out in next steps) of course exept my id
+        const matchedUserIds = matchesData
+          .map(match => {
+            if (match.user1_id === session.user.id) return match.user2_id;
+            return match.user1_id;
           })
+          .filter(Boolean);
+
+
+
+        //🎯step 4 :plit profiles into matched and not-matched
+
+        //Filter out matched profiles from ALL PROFILES
+        const matched = profilesData.filter(profile =>
+          matchedUserIds.includes(profile.id)
         );
 
+        const notMatched = profilesData.filter(profile =>
+          !matchedUserIds.includes(profile.id)
+        );
+
+   
+
+
+
+
+        //deprecated code: HIDE || still save for refernce
+        //geocode only not mached.. note for me WHY? Faster initial load: 
+          //nonsense naman i geo load pa natin matched i guess?? mabagal kasi.
+
+//DEPRECATED CODE still savev
+
+                                      //   const profilesWithAddresses = await Promise.all(
+                                      //   notMatched.map(async (profile: any) => {
+                                      //     const lat = parseFloat(profile.latitude);
+                                      //     const lng = parseFloat(profile.longitude);
+                                      //     const address = await reverseGeocode(lat, lng);
+                                      //     return { ...profile, address };
+                                      //   })
+                                      // );
+
+                                      // //sv🎯tep 6: Update state
+                                      // setProfiles(profilesWithAddresses);
+                                      // setMatchedProfiles(matched);
+
+                                      
+         const addAddress = async (profiles: Profile[]) => {
+          return Promise.all(
+            profiles.map(async (profile) => {
+              const lat = parseFloat(profile.latitude);
+              const lng = parseFloat(profile.longitude);
+              try {
+                const address = await reverseGeocode(lat, lng);
+                return { ...profile, address };
+              } catch (err) {
+                console.warn(`Failed to geocode profile ${profile.id}`, err);
+                return profile; 
+              }
+            })
+          );
+        };
+
+        //sv🎯tep 6: Update state
+        // Process both sets
+        const profilesWithAddresses = await addAddress(notMatched);
+        const matchedProfilesWithAddresses = await addAddress(matched);
+
         setProfiles(profilesWithAddresses);
+        setMatchedProfiles(matchedProfilesWithAddresses);
 
 
       } catch (err: any) {
@@ -101,5 +183,5 @@ export function useProfiles(session: Session | null) {
     load();
   }, [session]);
 
-  return { profiles, fetching };
+  return { profiles, matchedProfiles, fetching };
 }

@@ -95,6 +95,7 @@ import {
 //OVERALL CONCEPT HOW THIS MOVE
 //I MEAN JUST READ THIS
 //https://reactnative.dev/docs/panresponder
+
 //Initialize State  
 //const [currentIndex, setCurrentIndex] = useState(0);
 //const [positions, setPositions] = useState<Animated.ValueXY[]>([]);
@@ -281,7 +282,8 @@ export default forwardRef<SwipeCardHandle, SwipeCardProps<any>>(function MyOwnSw
 
 
 
-    // Initialize positions//////issue: x is undefined because initially X == 0
+    //count of POSITIONS is based on the submitted DATA (profiles example)
+    //currentIndex is just counter to POSITIONS,,, and not the actual id,, set ID on index.tsx
     useEffect(() => {
         const newPositions = data.map(() => new Animated.ValueXY({ x: 0, y: 0 }));
 
@@ -345,6 +347,8 @@ export default forwardRef<SwipeCardHandle, SwipeCardProps<any>>(function MyOwnSw
 
                 setCurrentIndex(data.length);
             } else if (currentIndex < data.length - 1) {
+
+
                 setCurrentIndex(currentIndex + 1);
             } else { //= idk maybe just keep if ===
                 setCurrentIndex(data.length);
