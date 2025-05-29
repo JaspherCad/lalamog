@@ -235,11 +235,13 @@ export default function Home() {
       //automatic lexigoraphically sort in supabase triggers
       const { error: swipeError } = await supabase
         .from('swipe_actions')
-        .insert({
+        .upsert({
           swiper_id: session.user.id,
           swipee_id: swipeeId,
           direction,
-        })
+        }, {
+        onConflict: 'swiper_id,swipee_id', 
+      });
 
 
       if (swipeError) throw swipeError;
@@ -282,7 +284,9 @@ export default function Home() {
         }
       }
 
-      setCurrentProfiles((prev) => prev.filter((p) => p.id !== swipeeId));
+
+      //BOLSHIT ERROR!
+      //setCurrentProfiles((prev) => prev.filter((p) => p.id !== swipeeId));
 
     } catch (err: any) {
       console.error('Swipe failed:', err.message);
@@ -352,7 +356,7 @@ export default function Home() {
 
                 <View style={styles.infoContainer}>
                   <Text style={styles.name}>{p.username}</Text>
-                  {p.bio && <Text style={styles.bio}>{p.bio}</Text>}
+                  {p.bio && <Text style={styles.bio}>{p.id}</Text>}
 
                   <View style={styles.metaRow}>
                     <Text style={styles.metaText}>{p.fighting_style || 'Style: —'}</Text>
