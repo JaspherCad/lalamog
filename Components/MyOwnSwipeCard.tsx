@@ -44,7 +44,7 @@
 
 
 
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
     Animated,
     Dimensions,
@@ -192,7 +192,14 @@ export default forwardRef<SwipeCardHandle, SwipeCardProps<any>>(function MyOwnSw
     const [positions, setPositions] = useState<Animated.ValueXY[]>([]);
     const animatedValue = new Animated.Value(0);
 
+    //handle swipe
+    const mountedRef = useRef(true);
 
+    useEffect(() => {
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
 
 
@@ -285,13 +292,13 @@ export default forwardRef<SwipeCardHandle, SwipeCardProps<any>>(function MyOwnSw
     //count of POSITIONS is based on the submitted DATA (profiles example)
     //currentIndex is just counter to POSITIONS,,, and not the actual id,, set ID on index.tsx
     useEffect(() => {
+        if (data.length === 0) return;
+
         const newPositions = data.map(() => new Animated.ValueXY({ x: 0, y: 0 }));
-
-
-        //for infinite swipe if used up. ALWAYS ADD ONE (safe? yes bcz of re-rendering)
+        //for infinite swipe always add one in last length
         newPositions.push(new Animated.ValueXY({ x: 0, y: 0 }));
-
         setPositions(newPositions);
+        setCurrentIndex(0);
     }, [data]);
 
     if (positions.length === 0) {
@@ -311,16 +318,22 @@ export default forwardRef<SwipeCardHandle, SwipeCardProps<any>>(function MyOwnSw
     //by currentCard.setValue({ x: 0, y: 0 }); and updated currentIndex
 
 
-    //handle swipe
-    const handleSwipe = (direction: 'left' | 'right') => {
-        const currentCard = positions[currentIndex]; //to pan or drag a current-card, here is the logic
 
-        //customizable fallback logic custom mine code
-        if (direction === 'left' && onSwipeLeft) {
-            onSwipeLeft(currentIndex);
-        } else if (direction === 'right' && onSwipeRight) {
-            onSwipeRight(currentIndex);
+    const handleSwipe = (direction: 'left' | 'right') => {
+        const isValidIndex = mountedRef.current && currentIndex < data.length;
+
+
+
+        const currentCard = positions[currentIndex]; //to pan or drag a current-card, here is the logic
+        if (isValidIndex) {
+            //customizable fallback logic custom mine code
+            if (direction === 'left' && onSwipeLeft) {
+                onSwipeLeft(currentIndex);
+            } else if (direction === 'right' && onSwipeRight) {
+                onSwipeRight(currentIndex);
+            }
         }
+
 
         // Animate off screen
         //again, currentCard === array of Animated.ValueXY({ x: 0, y: 0 }) [based on currentIndex]
@@ -332,6 +345,7 @@ export default forwardRef<SwipeCardHandle, SwipeCardProps<any>>(function MyOwnSw
             duration: 200,
             useNativeDriver: true,
         }).start(() => {
+            if (!mountedRef.current) return;
             // Reset value
             currentCard.setValue({ x: 0, y: 0 });
 
@@ -342,17 +356,15 @@ export default forwardRef<SwipeCardHandle, SwipeCardProps<any>>(function MyOwnSw
 
 
             //update about INFINITE SCROLL
-            if (currentIndex >= data.length) {
-                //setMotivationApi()
-
-                setCurrentIndex(data.length);
-            } else if (currentIndex < data.length - 1) {
-
-
-                setCurrentIndex(currentIndex + 1);
-            } else { //= idk maybe just keep if ===
-                setCurrentIndex(data.length);
+            if (currentIndex < data.length) {
+                if (isValidIndex && currentIndex < data.length - 1) {
+                    setCurrentIndex(currentIndex + 1);
+                } else {
+                    //DUMMY CARD
+                    setCurrentIndex(data.length);
+                }
             }
+
         });
     };
 
@@ -403,7 +415,7 @@ export default forwardRef<SwipeCardHandle, SwipeCardProps<any>>(function MyOwnSw
 
 
 
-    
+
 
 
 
@@ -481,23 +493,16 @@ export default forwardRef<SwipeCardHandle, SwipeCardProps<any>>(function MyOwnSw
                     },
                     cardStyle,
                 ]}>
-                    {customPreviewRender ?
-                        (<>
-                            {/* if custom logic. JUST TRIGGER the logic here and DEFINE logic in APPS */}
-                            {customPreviewRender(data[currentIndex + 1])}
-                        </>)
-                        :
-                        (<>
-                            {/* <Image
-                        source={data[currentIndex + 1].imageUrl}
-                        style={styles.previewImage}
-                    /> */}
-                            <Text >
-                                Please provide  customPreviewRender ("use the returnd PROFILE (not index).. but whole profile")
-                            </Text>
-                        </>)
 
-                    }
+                    {currentIndex + 1 < data.length && (
+                        <View style={[styles.previewCard, { width: cardSize.width, height: cardSize.height }]}>
+                            {customPreviewRender ? customPreviewRender(data[currentIndex + 1]) : <Text >
+                                Please provide  customPreviewRender ("use the returnd PROFILE (not index).. but whole profile")
+                            </Text>}
+                        </View>
+                    )}
+
+
                 </View>
             )}
 

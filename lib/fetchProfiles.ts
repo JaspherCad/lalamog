@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from './supabase';
 
@@ -45,8 +45,8 @@ async function reverseGeocode(lat: number, lng: number) {
 
 
 export function useProfiles(session: Session | null) {
+  const hasSubscribed = useRef(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
-
 
 
   //already matched, can be PASSED for message views and to filter out the NOTmathcedProfiles
@@ -56,16 +56,13 @@ export function useProfiles(session: Session | null) {
 
   const [fetching, setFetching] = useState(false);
 
-  useEffect(() => {
-    if (!session) {
+const load = async () => {
+      try {
+        if (!session) {
       setProfiles([]);
       return;
     }
 
-
-
-    const load = async () => {
-      try {
 
 
 
@@ -132,7 +129,7 @@ export function useProfiles(session: Session | null) {
         //geocode only not mached.. note for me WHY? Faster initial load: 
           //nonsense naman i geo load pa natin matched i guess?? mabagal kasi.
 
-//DEPRECATED CODE still savev
+      //DEPRECATED CODE still savev
 
                                       //   const profilesWithAddresses = await Promise.all(
                                       //   notMatched.map(async (profile: any) => {
@@ -165,12 +162,12 @@ export function useProfiles(session: Session | null) {
         };
 
         //sv🎯tep 6: Update state
-        // Process both sets
-        const profilesWithAddresses = await addAddress(notMatched);
-        const matchedProfilesWithAddresses = await addAddress(matched);
+                              //❌geocode only not mached.. note for me WHY? Faster initial load:
+        const profilesWithAddresses = await addAddress(notMatched);   //await addAddress(matched);
+                              
 
         setProfiles(profilesWithAddresses);
-        setMatchedProfiles(matchedProfilesWithAddresses);
+        setMatchedProfiles(matched);
 
 
       } catch (err: any) {
@@ -180,8 +177,251 @@ export function useProfiles(session: Session | null) {
       }
     };
 
+
+
+
+
+
+
+
+
+    
+
+
+
+    //two ways to trigger load
+      //on session change
+      //on websocket
+  
+
+
+
+
+
+  //on session change
+  useEffect(() => {
     load();
+  }, [session]);
+
+
+
+
+
+  //on websocket
+  
+  useEffect(() => {
+    if (!session || hasSubscribed.current) return;
+
+    const channel = supabase
+      .channel('matches-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'matches',
+        },
+        (payload) => {
+          const match = payload.new;
+          if (
+            match.user1_id === session.user.id ||
+            match.user2_id === session.user.id
+          ) {
+            load();//refetchd
+          }
+        }
+      )
+      .subscribe();
+
+    hasSubscribed.current = true;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session]);
+
+  useEffect(() => {
+    if (!session || hasSubscribed.current) return;
+
+    const channel = supabase
+      .channel('matches-changes')
+      .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'matches',
+      },(payload) => {
+        const deletedMatch = payload.old;
+          if (
+          deletedMatch?.user1_id === session.user.id ||
+          deletedMatch?.user2_id === session.user.id
+        ) {
+            load();//refetchd
+          }
+        }
+      )
+      .subscribe();
+
+    hasSubscribed.current = true;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [session]);
 
   return { profiles, matchedProfiles, fetching };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import type { Session } from '@supabase/supabase-js';
+// import { useEffect, useState } from 'react';
+// import { Alert } from 'react-native';
+// import { supabase } from './supabase';
+
+// export type Profile = {
+//   id: string;
+//   username: string;
+//   full_name: string;
+//   avatar_url: string | null;
+//   bio: string | null;
+//   fighting_style: string | null;
+//   experience_level: number | null;
+//   availability: { days: string[]; time: string } | null;
+//   latitude: string;
+//   longitude: string;
+//   address?: string;
+
+// };
+
+
+
+
+// //helper function for getting actual address rather than numerics FReE?? idk try
+// async function reverseGeocode(lat: number, lng: number) {
+//   const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=   ${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+//   const response = await fetch(url, {
+//     headers: { 'User-Agent': 'MyApp/1.0' } // Required by OSM
+//   });
+//   const data = await response.json();
+
+//   const address = data.address;
+
+//   const parts = [
+//     address.road,
+//     address.suburb,
+//     address.city || address.town || address.village,
+//     address.state,
+//     address.country,
+//   ].filter(Boolean);
+
+//   return parts.join(', ');
+// }
+
+
+
+// export function useProfiles(session: Session | null) {
+//   const [profiles, setProfiles] = useState<Profile[]>([]);
+//   const [fetching, setFetching] = useState(false);
+
+//   useEffect(() => {
+//     if (!session) {
+//       setProfiles([]);
+//       return;
+//     }
+
+    
+
+//     const load = async () => {
+//       try {
+//         setFetching(true);
+//         const { data, error } = await supabase
+//           .from('profiles')
+//           .select(`
+//             id,
+//             username,
+//             full_name,
+//             avatar_url,
+//             latitude,
+//             longitude,
+//             bio,
+//             fighting_style,
+//             experience_level,
+//             availability
+//           `)
+//           .neq('id', session.user.id);
+
+//         if (error) throw error;
+
+
+
+//         const profilesWithAddresses = await Promise.all(
+//           data.map(async (profile: any) => {
+//             const lat = parseFloat(profile.latitude);
+//             const lng = parseFloat(profile.longitude);
+//             const address = await reverseGeocode(lat, lng);
+//             return { ...profile, address };
+//           })
+//         );
+
+//         setProfiles(profilesWithAddresses);
+
+
+//       } catch (err: any) {
+//         Alert.alert('Error loading profiles', err.message);
+//       } finally {
+//         setFetching(false);
+//       }
+//     };
+
+//     load();
+//   }, [session]);
+
+//   return { profiles, fetching };
+// }
+
+
