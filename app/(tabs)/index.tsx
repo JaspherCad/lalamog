@@ -252,7 +252,8 @@ export default function Home() {
         .from('matches')
         .delete()
         .eq('user1_id', userId_1)
-        .eq('user2_id', userId_2);
+        .eq('user2_id', userId_2)
+        .eq('status', 'active'); 
     }
 
       if (direction === 'right') {
@@ -270,7 +271,7 @@ export default function Home() {
 
 
         //if error code is PGRST116 return log eror
-        if (matchError) { //&& matchError.code !== 'PGRST116'
+        if (matchError && matchError.code !== 'PGRST116') { //&& matchError.code !== 'PGRST116'
           console.log(matchError.code)
           throw matchError;
         }

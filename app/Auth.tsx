@@ -19,9 +19,13 @@ AppState.addEventListener('change', (state) => {
 
 export default function Auth() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState('tanga2@gmail.com')
   const [password, setPassword] = useState('password123!')
   const [loading, setLoading] = useState(false)
+
+
+  const geojson = `SRID=4326;POINT(120.9842 14.5995)`;
+
 
   async function signInWithEmail() {
     setLoading(true)
@@ -32,6 +36,7 @@ export default function Auth() {
 
     if (error) {
       Alert.alert(error.message);
+      console.log(error)
     } else {
       const { data } = await supabase.auth.getSession();
       router.replace('/Account');
@@ -47,7 +52,13 @@ export default function Auth() {
     } = await supabase.auth.signUp({
       email: email,
       password: password,
-    })
+      options: {
+        data: {
+          location: geojson
+        }
+      }
+    });
+
 
     if (error) Alert.alert(error.message)
     if (!session) Alert.alert('Please check your inbox for email verification!')
@@ -64,28 +75,24 @@ export default function Auth() {
   async function seedUsers() {
     setLoading(true)
     const users = [
-      { email: "alice@example.com", password: "password123" },
-      { email: "bob@example.com", password: "password123" },
-      { email: "carol@example.com", password: "password123" },
-      { email: "david@example.com", password: "password123" },
-      { email: "eve@example.com", password: "password123" },
-      //jairene@gmail
-      //joshua
-      //jeneth  OUTSIDER
-      //jane
-      //nikki
-      { email: "jerome@example.com", password: "password123" },
-      { email: "hahahaha@example.com", password: "password123" },
-      { email: "muslimking@example.com", password: "password123" },
-      { email: "christianking@example.com", password: "password123" },
-      { email: "kingofph@example.com", password: "password123" },
+      { email: "kingBarou@gmail.com", password: "password123" },
+ 
+      // //jairene@gmail "password123"
+      // //joshua "password123"
+      // //jeneth  OUTSIDER "password123"
+      // //jane "password123"
+      // //nikki "password123"
+      // //kingbarou "password123"
+
+     
     ]
 
     for (let u of users) {
       const { data: { session }, error } = await supabase.auth.signUp({
         email: u.email,
-        password: u.password,
-      })
+        password: u.password
+      });
+
       if (error) {
         Alert.alert('Error seeding', error.message)
         break

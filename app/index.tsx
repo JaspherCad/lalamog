@@ -10,6 +10,7 @@ export default function Index() {
 
   useEffect(() => {
     console.log(`INDEX --- am i loading?: ${isLoading}`)
+    //uncommment this shit if error wtf!
     if (isLoading) return
     
     if (session) {
@@ -18,7 +19,7 @@ export default function Index() {
       router.replace('/Auth')
     }
     console.log(`INDEX --- am i loading?: ${isLoading}`)
-  }, [session])
+  }, [session, isLoading ])
 
   return null 
 }

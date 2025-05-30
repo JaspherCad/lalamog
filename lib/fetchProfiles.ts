@@ -209,66 +209,118 @@ const load = async () => {
 
   //on websocket
   
-  useEffect(() => {
-    if (!session || hasSubscribed.current) return;
+  // useEffect(() => {
+  //   if (!session || hasSubscribed.current) return;
 
-    const channel = supabase
-      .channel('matches-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'matches',
-        },
-        (payload) => {
-          const match = payload.new;
-          if (
-            match.user1_id === session.user.id ||
-            match.user2_id === session.user.id
-          ) {
-            load();//refetchd
-          }
-        }
-      )
-      .subscribe();
+  //   const channel = supabase
+  //     .channel('matches-changes')
+  //     .on(
+  //       'postgres_changes',
+  //       {
+  //         event: 'INSERT',
+  //         schema: 'public',
+  //         table: 'matches',
+  //       },
+  //       (payload) => {
+  //         const match = payload.new;
+  //         if (
+  //           match.user1_id === session.user.id ||
+  //           match.user2_id === session.user.id
+  //         ) {
+  //           load();//refetchd
+  //         }
+  //       }
+  //     )
+  //     .on(
+  //     'postgres_changes',
+  //     {
+  //       event: 'DELETE',
+  //       schema: 'public',
+  //       table: 'matches',
+  //     },(payload) => {
+  //       const deletedMatch = payload.old;
+  //         if (
+  //         deletedMatch?.user1_id === session.user.id ||
+  //         deletedMatch?.user2_id === session.user.id
+  //       ) {
+  //           load();//refetchd
+  //         }
+  //       }
+  //     )
+  //     .subscribe();
 
-    hasSubscribed.current = true;
+  //   hasSubscribed.current = true;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session]);
+  //   return () => {
+  //     supabase.removeChannel(channel);
+  //   };
+  // }, [session]);
 
-  useEffect(() => {
-    if (!session || hasSubscribed.current) return;
 
-    const channel = supabase
-      .channel('matches-changes')
-      .on(
+useEffect(() => {
+  if (!session || hasSubscribed.current) return;
+
+  const channelName = `matches-changes-${session.user.id}`;
+  const channel = supabase
+    .channel(channelName) // ✅ Unique per user
+    .on(
       'postgres_changes',
       {
-        event: 'DELETE',
+        event: '*',
         schema: 'public',
         table: 'matches',
-      },(payload) => {
-        const deletedMatch = payload.old;
-          if (
-          deletedMatch?.user1_id === session.user.id ||
-          deletedMatch?.user2_id === session.user.id
-        ) {
-            load();//refetchd
-          }
+        filter: `or=(user1_id.eq.${session.user.id},user2_id.eq.${session.user.id})`
+      },
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          Alert.alert('New match!', 'You matched with someone!', [{ text: 'OK' }]);
+        } else if (payload.eventType === 'DELETE') {
+          Alert.alert('Match removed', 'Someone unmatched with you', [{ text: 'OK' }]);
         }
-      )
-      .subscribe();
+        load(); // Re-fetch profiles
+      }
+    )
+    .subscribe();
 
-    hasSubscribed.current = true;
+  hasSubscribed.current = true;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session]);
+  return () => {
+    supabase.removeChannel(channel);
+    hasSubscribed.current = false;
+  };
+}, [session]);
+
+  
+
+  // useEffect(() => {
+  //   if (!session || hasSubscribed.current) return;
+
+  //   const channel = supabase
+  //     .channel('matches-changes')
+  //     .on(
+  //     'postgres_changes',
+  //     {
+  //       event: 'DELETE',
+  //       schema: 'public',
+  //       table: 'matches',
+  //     },(payload) => {
+  //       const deletedMatch = payload.old;
+  //         if (
+  //         deletedMatch?.user1_id === session.user.id ||
+  //         deletedMatch?.user2_id === session.user.id
+  //       ) {
+  //           load();//refetchd
+  //         }
+  //       }
+  //     )
+  //     .subscribe();
+
+  //   hasSubscribed.current = true;
+
+  //   return () => {
+  //     supabase.removeChannel(channel);
+  //   };
+  // }, [session]);
 
   return { profiles, matchedProfiles, fetching };
 }
