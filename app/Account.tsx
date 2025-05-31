@@ -1,6 +1,7 @@
 import CustomScreenHeader from '@/Components/CustomScreenHeader'
+import { useAuth } from '@/lib/AuthProvider'
 import { useAvatarUpload } from '@/lib/AvatarUplaod'
-import { useAuth } from '@/lib/useAuth'
+import { useProfiles } from '@/lib/fetchProfiles'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { Picker } from '@react-native-picker/picker'
 import { Button, Input } from '@rneui/themed'
@@ -22,12 +23,15 @@ export default function Account() {
   const [bio, setBio] = useState('')
   const [fullName, setfullName] = useState('')
 
+  ///useProfiles and useAvatarUpload
+
+
 
   //AVAILABILITY TIME:
   const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
-
+  const { updateProfileToFix } = useProfiles('account');
   //toggler of time popup
   const [showStartPicker, setShowStartPicker] = useState(false)
   const [showEndPicker, setShowEndPicker] = useState(false)
@@ -183,7 +187,7 @@ export default function Account() {
       //verify first here if ok uncomment process
       console.log(updates)
 
-      const { error } = await supabase.from('profiles').upsert(updates)
+      const error = await updateProfileToFix(updates)
       console.log("AWAIT DONE")
       if (error) {
         throw error

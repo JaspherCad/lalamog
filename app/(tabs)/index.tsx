@@ -1,7 +1,7 @@
 import SwipeCard, { SwipeCardHandle } from '@/Components/MyOwnSwipeCard';
+import { useAuth } from '@/lib/AuthProvider';
 import { useProfiles } from '@/lib/fetchProfiles';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/useAuth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Redirect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -47,7 +47,7 @@ import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-na
 
 //step 2
 //since we already have listener that detects manual swipe, we can listen on it
-//useEffect + .channel
+//useEffect + .chn
 
 // step 3 
 //FETCH that matches from the table itslef
@@ -108,7 +108,7 @@ export default function Home() {
 
   const { session, isLoading } = useAuth();
 
-  const { profiles, matchedProfiles, fetching } = useProfiles(session)
+  const { profiles, matchedProfiles, fetching } = useProfiles('swipe');
 
 
   //useStatae of profiels, setProfiles

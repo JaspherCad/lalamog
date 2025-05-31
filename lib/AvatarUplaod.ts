@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { useState } from 'react'
 import { Alert } from 'react-native'
 import { supabase } from '../lib/supabase'
+import { useProfiles } from './fetchProfiles'
 
 
 
@@ -30,11 +31,12 @@ import { supabase } from '../lib/supabase'
 
 
 //27/05/2025
-            //SIMPLE GOAL ❌ ==> base64 keeps error.. try blob
-            //base64 is the supported way to upload media type REACT NATIVE + supabase... keep base64 not blob
+//SIMPLE GOAL ❌ ==> base64 keeps error.. try blob
+//base64 is the supported way to upload media type REACT NATIVE + supabase... keep base64 not blob
 
 export function useAvatarUpload() {
     const [uploading, setUploading] = useState(false)
+    const { updatePictureProfileToFix } = useProfiles('accountrr'); //'account' try if bugged again
 
     async function uploadAvatar(userId: string, setAvatarUrl: (url: string) => void) {
         setUploading(true)
@@ -55,9 +57,9 @@ export function useAvatarUpload() {
                 return
             }
 
-            
-            
-            
+
+
+
 
 
             const result = await ImagePicker.launchImageLibraryAsync({
@@ -107,10 +109,17 @@ export function useAvatarUpload() {
                 console.log(publicUrl)
                 setAvatarUrl(publicUrl)
 
-                const { error: updateError } = await supabase
-                    .from('profiles')
-                    .update({ avatar_url: publicUrl })
-                    .eq('id', userId)
+                // const { error: updateError } = await supabase
+                //     .from('profiles')
+                //     .update({ avatar_url: publicUrl })
+                //     .eq('id', userId) 
+
+                // IF error again, uncomment the TOP code,, comment the bottom code
+
+
+                const updateError = await updatePictureProfileToFix(publicUrl,userId )
+                console.log("AWAIT DONE")
+         
 
                 if (updateError) {
                     setAvatarUrl('')

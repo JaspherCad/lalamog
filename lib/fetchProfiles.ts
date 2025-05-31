@@ -1,6 +1,6 @@
-import type { Session } from '@supabase/supabase-js';
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
+import { useAuth } from './AuthProvider';
 import { supabase } from './supabase';
 
 export type Profile = {
@@ -44,7 +44,12 @@ async function reverseGeocode(lat: number, lng: number) {
 
 
 
-export function useProfiles(session: Session | null) {
+
+
+
+export function useProfiles(context: string) {
+    const { session, isLoading } = useAuth()
+  
   const hasSubscribed = useRef(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
@@ -55,6 +60,48 @@ export function useProfiles(session: Session | null) {
 
 
   const [fetching, setFetching] = useState(false);
+
+
+
+
+
+
+
+   const updateProfileToFix = async (updates: Partial<Profile>) => {
+    try{
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(updates);
+
+    return error;
+
+    }catch(error){
+      console.log(error)
+    }
+    
+
+  }
+
+  const updatePictureProfileToFix = async (publicUrl: string, userId: string) => {
+    try{
+    const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({ avatar_url: publicUrl })
+                    .eq('id', userId)
+
+    return updateError;
+
+    }catch(error){
+      console.log(error)
+    }
+    
+
+  }
+
+
+
+
+
 
 const load = async () => {
       try {
@@ -213,7 +260,7 @@ const load = async () => {
   //   if (!session || hasSubscribed.current) return;
 
   //   const channel = supabase
-  //     .channel('matches-changes')
+  //     .ch('matches-changes')
   //     .on(
   //       'postgres_changes',
   //       {
@@ -260,9 +307,9 @@ const load = async () => {
 useEffect(() => {
   if (!session || hasSubscribed.current) return;
 
-  const channelName = `matches-changes-${session.user.id}`;
+  // const channelName = `matches-changes-${session.user.id}`;
   const channel = supabase
-    .channel(channelName) // ✅ Unique per user
+    .channel(`matches-changes-${context}-${session.user.id}`) 
     .on(
       'postgres_changes',
       {
@@ -277,7 +324,7 @@ useEffect(() => {
         } else if (payload.eventType === 'DELETE') {
           Alert.alert('Match removed', 'Someone unmatched with you', [{ text: 'OK' }]);
         }
-        load(); // Re-fetch profiles
+        load();
       }
     )
     .subscribe();
@@ -288,15 +335,20 @@ useEffect(() => {
     supabase.removeChannel(channel);
     hasSubscribed.current = false;
   };
-}, [session]);
+}, [session, context]);
 
   
+
+
+
+
+
 
   // useEffect(() => {
   //   if (!session || hasSubscribed.current) return;
 
   //   const channel = supabase
-  //     .channel('matches-changes')
+  //     .ch('matches-changes')
   //     .on(
   //     'postgres_changes',
   //     {
@@ -322,7 +374,11 @@ useEffect(() => {
   //   };
   // }, [session]);
 
-  return { profiles, matchedProfiles, fetching };
+
+  
+
+
+  return { profiles, matchedProfiles, fetching, updateProfileToFix, updatePictureProfileToFix };
 }
 
 

@@ -1,5 +1,5 @@
 // app/index.tsx
-import { useAuth } from '@/lib/useAuth';
+import { useAuth } from '@/lib/AuthProvider';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
